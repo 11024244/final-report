@@ -624,3 +624,249 @@ wide_window.plot(baseline)
  + 綠色的 Labels 點顯示目標預測值。這些點在預測時間，而不是輸入時間顯示。這就是為什麼標籤範圍相對於輸入移動了 1 步。
  * 橘色的 Predictions 叉是模型針對每個輸出時間步驟的預測。如果模型能夠進行完美預測，則預測值將直接落在 Labels 上。
 
+## 線性模型
+
+可以應用於此任務的最簡單的可訓練模型是在輸入和輸出之間插入線性轉換。在這種情況下，時間步驟的輸出僅取決於該步驟：
+![image](https://github.com/11024244/final-report/blob/main/jpg/18.png)
+沒有設定 activation 的[tf.keras.layers.Dense](https://tensorflow.google.cn/api_docs/python/tf/keras/layers/Dense)層是線性模型。圖層只會將資料的最後一個軸從 (batch, time, inputs) 轉換為 (batch, time, units)；它會單獨應用於 batch 和 time 軸的每個條目。
+```python
+linear = tf.keras.Sequential([
+    tf.keras.layers.Dense(units=1)
+])
+```
+```python
+print('Input shape:', single_step_window.example[0].shape)
+print('Output shape:', linear(single_step_window.example[0]).shape)
+```
+```
+Input shape: (32, 1, 19)
+Output shape: (32, 1, 1)
+```
+本教學訓練許多模型，因此將訓練過程打包到一個函數中：
+```python
+MAX_EPOCHS = 20
+
+def compile_and_fit(model, window, patience=2):
+  early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                    patience=patience,
+                                                    mode='min')
+
+  model.compile(loss=tf.keras.losses.MeanSquaredError(),
+                optimizer=tf.keras.optimizers.Adam(),
+                metrics=[tf.keras.metrics.MeanAbsoluteError()])
+
+  history = model.fit(window.train, epochs=MAX_EPOCHS,
+                      validation_data=window.val,
+                      callbacks=[early_stopping])
+  return history
+```
+訓練模型並評估其表現：
+```python
+history = compile_and_fit(linear, single_step_window)
+
+val_performance['Linear'] = linear.evaluate(single_step_window.val)
+performance['Linear'] = linear.evaluate(single_step_window.test, verbose=0)
+```
+```
+Epoch 1/20
+20/1534 [..............................] - ETA: 3s - loss: 1.2007 - mean_absolute_error: 0.8521
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1699404805.567571  919923 device_compiler.h:186] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.1758 - mean_absolute_error: 0.2720 - val_loss: 0.0208 - val_mean_absolute_error: 0.1083
+Epoch 2/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0141 - mean_absolute_error: 0.0879 - val_loss: 0.0096 - val_mean_absolute_error: 0.0719
+Epoch 3/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0096 - mean_absolute_error: 0.0719 - val_loss: 0.0091 - val_mean_absolute_error: 0.0710
+Epoch 4/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0093 - mean_absolute_error: 0.0708 - val_loss: 0.0088 - val_mean_absolute_error: 0.0693
+Epoch 5/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0092 - mean_absolute_error: 0.0704 - val_loss: 0.0088 - val_mean_absolute_error: 0.0694
+Epoch 6/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0700 - val_loss: 0.0087 - val_mean_absolute_error: 0.0690
+Epoch 7/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0700 - val_loss: 0.0087 - val_mean_absolute_error: 0.0687
+Epoch 8/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0698 - val_loss: 0.0088 - val_mean_absolute_error: 0.0690
+Epoch 9/20
+1534/1534 [==============================] - 4s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0698 - val_loss: 0.0087 - val_mean_absolute_error: 0.0684
+Epoch 10/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0698 - val_loss: 0.0087 - val_mean_absolute_error: 0.0683
+Epoch 11/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0698 - val_loss: 0.0087 - val_mean_absolute_error: 0.0684
+Epoch 12/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0698 - val_loss: 0.0086 - val_mean_absolute_error: 0.0680
+Epoch 13/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0091 - mean_absolute_error: 0.0697 - val_loss: 0.0086 - val_mean_absolute_error: 0.0682
+Epoch 14/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0090 - mean_absolute_error: 0.0698 - val_loss: 0.0087 - val_mean_absolute_error: 0.0681
+Epoch 15/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0090 - mean_absolute_error: 0.0697 - val_loss: 0.0086 - val_mean_absolute_error: 0.0680
+Epoch 16/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0090 - mean_absolute_error: 0.0697 - val_loss: 0.0087 - val_mean_absolute_error: 0.0688
+Epoch 17/20
+1534/1534 [==============================] - 5s 3ms/step - loss: 0.0090 - mean_absolute_error: 0.0696 - val_loss: 0.0086 - val_mean_absolute_error: 0.0679
+439/439 [==============================] - 1s 2ms/step - loss: 0.0086 - mean_absolute_error: 0.0679
+```
+與 baseline 模型類似，可以在寬度視窗的批次上呼叫線性模型。使用這種方式，模型會在連續的時間步驟上進行一系列獨立預測。 time 軸的作用類似另一個 batch 軸。在每個時間步驟上，預測之間沒有交互作用。
+![image](https://github.com/11024244/final-report/blob/main/jpg/19.png)
+```python
+print('Input shape:', wide_window.example[0].shape)
+print('Output shape:', baseline(wide_window.example[0]).shape)
+```
+```
+Input shape: (32, 24, 19)
+Output shape: (32, 24, 1)
+```
+下面是 wide_widow 上它的樣本預測圖。請注意，在許多情況下，預測值顯然比僅返回輸入溫度更好，但在某些情況下則會更差：
+```python
+wide_window.plot(linear)
+```
+![image](https://github.com/11024244/final-report/blob/main/jpg/20.png)
+線性模型的優點之一是它們相對易於解釋。您可以拉取層的權重，並呈現分配給每個輸入的權重：
+```python
+plt.bar(x = range(len(train_df.columns)),
+        height=linear.layers[0].kernel[:,0].numpy())
+axis = plt.gca()
+axis.set_xticks(range(len(train_df.columns)))
+_ = axis.set_xticklabels(train_df.columns, rotation=90)
+```
+![image](https://github.com/11024244/final-report/blob/main/jpg/21.png)
+有時模型甚至不會將大多數權重放在輸入 T (degC) 上。這是隨機初始化的風險之一。
+
+## 密集
+
+在應用實際運算多個時間步驟的模型之前，值得先研究一下更深、更強大的單輸入步驟模型的表現。
+
+下面是一個與 linear 模型類似的模型，只不過它在輸入和輸出之間堆疊了幾個 Dense 層：
+```python
+dense = tf.keras.Sequential([
+    tf.keras.layers.Dense(units=64, activation='relu'),
+    tf.keras.layers.Dense(units=64, activation='relu'),
+    tf.keras.layers.Dense(units=1)
+])
+
+history = compile_and_fit(dense, single_step_window)
+
+val_performance['Dense'] = dense.evaluate(single_step_window.val)
+performance['Dense'] = dense.evaluate(single_step_window.test, verbose=0)
+```
+```
+Epoch 1/20
+1534/1534 [==============================] - 8s 4ms/step - loss: 0.0139 - mean_absolute_error: 0.0794 - val_loss: 0.0080 - val_mean_absolute_error: 0.0652
+Epoch 2/20
+1534/1534 [==============================] - 6s 4ms/step - loss: 0.0080 - mean_absolute_error: 0.0648 - val_loss: 0.0072 - val_mean_absolute_error: 0.0614
+Epoch 3/20
+1534/1534 [==============================] - 6s 4ms/step - loss: 0.0074 - mean_absolute_error: 0.0621 - val_loss: 0.0069 - val_mean_absolute_error: 0.0595
+Epoch 4/20
+1534/1534 [==============================] - 6s 4ms/step - loss: 0.0072 - mean_absolute_error: 0.0607 - val_loss: 0.0069 - val_mean_absolute_error: 0.0596
+Epoch 5/20
+1534/1534 [==============================] - 6s 4ms/step - loss: 0.0070 - mean_absolute_error: 0.0596 - val_loss: 0.0068 - val_mean_absolute_error: 0.0587
+Epoch 6/20
+1534/1534 [==============================] - 6s 4ms/step - loss: 0.0068 - mean_absolute_error: 0.0589 - val_loss: 0.0065 - val_mean_absolute_error: 0.0574
+Epoch 7/20
+1534/1534 [==============================] - 7s 4ms/step - loss: 0.0068 - mean_absolute_error: 0.0586 - val_loss: 0.0067 - val_mean_absolute_error: 0.0583
+Epoch 8/20
+1534/1534 [==============================] - 7s 4ms/step - loss: 0.0067 - mean_absolute_error: 0.0583 - val_loss: 0.0068 - val_mean_absolute_error: 0.0582
+439/439 [==============================] - 1s 3ms/step - loss: 0.0068 - mean_absolute_error: 0.0582
+```
+## 多步驟密集
+
+單時間步驟模型沒有其輸入的目前值的上下文。它看不到輸入特徵隨時間變化的情況。要解決此問題，模型在進行預測時需要存取多個時間步驟：
+![image](https://github.com/11024244/final-report/blob/main/jpg/22.png)
+baseline、linear 和 dense 模型會單獨處理每個時間步驟。在這裡，模型將接受多個時間步驟作為輸入，以產生單一輸出。
+
+建立一個 WindowGenerator，它將產生 3 小時輸入和 1 小時標籤的批次：
+
+請注意，Window 的 shift 參數與兩個視窗的末端相關。
+```python
+CONV_WIDTH = 3
+conv_window = WindowGenerator(
+    input_width=CONV_WIDTH,
+    label_width=1,
+    shift=1,
+    label_columns=['T (degC)'])
+
+conv_window
+```
+```
+Total window size: 4
+Input indices: [0 1 2]
+Label indices: [3]
+Label column name(s): ['T (degC)']
+```
+```python
+conv_window.plot()
+plt.title("Given 3 hours of inputs, predict 1 hour into the future.")
+```
+```
+Text(0.5, 1.0, 'Given 3 hours of inputs, predict 1 hour into the future.')
+```
+![image](https://github.com/11024244/final-report/blob/main/jpg/23.png)
+您可以透過新增[tf.keras.layers.Flatten](https://tensorflow.google.cn/api_docs/python/tf/keras/layers/Flatten)作為模型的第一層，在多重輸入步驟視窗上訓練 dense 模型：
+```python
+multi_step_dense = tf.keras.Sequential([
+    # Shape: (time, features) => (time*features)
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(units=32, activation='relu'),
+    tf.keras.layers.Dense(units=32, activation='relu'),
+    tf.keras.layers.Dense(units=1),
+    # Add back the time dimension.
+    # Shape: (outputs) => (1, outputs)
+    tf.keras.layers.Reshape([1, -1]),
+])
+```
+```python
+print('Input shape:', conv_window.example[0].shape)
+print('Output shape:', multi_step_dense(conv_window.example[0]).shape)
+```
+```
+Input shape: (32, 3, 19)
+Output shape: (32, 1, 1)
+```
+```python
+history = compile_and_fit(multi_step_dense, conv_window)
+
+IPython.display.clear_output()
+val_performance['Multi step dense'] = multi_step_dense.evaluate(conv_window.val)
+performance['Multi step dense'] = multi_step_dense.evaluate(conv_window.test, verbose=0)
+```
+```
+438/438 [==============================] - 1s 2ms/step - loss: 0.0063 - mean_absolute_error: 0.0557
+```
+```python
+conv_window.plot(multi_step_dense)
+```
+![image](https://github.com/11024244/final-report/blob/main/jpg/24.png)
+此方法的主要缺點是，產生的模型只能在具有此形狀的輸入視窗上執行。
+```python
+print('Input shape:', wide_window.example[0].shape)
+try:
+  print('Output shape:', multi_step_dense(wide_window.example[0]).shape)
+except Exception as e:
+  print(f'\n{type(e).__name__}:{e}')
+```
+```
+Input shape: (32, 24, 19)
+
+ValueError:Exception encountered when calling layer 'sequential_2' (type Sequential).
+
+Input 0 of layer "dense_4" is incompatible with the layer: expected axis -1 of input shape to have value 57, but received input with shape (32, 456)
+
+Call arguments received by layer 'sequential_2' (type Sequential):
+  • inputs=tf.Tensor(shape=(32, 24, 19), dtype=float32)
+  • training=None
+  • mask=None
+```
+下一部分的捲積模型將解決這個問題。
+
+## 卷積神經網絡
+
+卷積層 ([tf.keras.layers.Conv1D](https://tensorflow.google.cn/api_docs/python/tf/keras/layers/Conv1D)) 也需要多個時間步驟作為每個預測的輸入。
+
+下面的模型與 multi_step_dense **相同**，使用卷積進行了重寫。
+
+請注意以下變化：
+
+ - [tf.keras.layers.Flatten](https://tensorflow.google.cn/api_docs/python/tf/keras/layers/Flatten) 和第一個 [tf.keras.layers.Dense](https://tensorflow.google.cn/api_docs/python/tf/keras/layers/Dense) 替換成了 [tf.keras.layers.Conv1D](https://tensorflow.google.cn/api_docs/python/tf/keras/layers/Conv1D)。
+ - 由於卷積將時間軸保留在其輸出中，不再需要[tf.keras.layers.Reshape](https://tensorflow.google.cn/api_docs/python/tf/keras/layers/Reshape)
+
