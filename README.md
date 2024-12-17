@@ -15,3 +15,22 @@
 - 預測多個時間步驟：
   * 單次：一次做出所有預測。
   + 自迴歸：一次做出一個預測，並將輸出饋送回模型。
+
+## 安裝
+```pthon
+import os
+import datetime
+
+import IPython
+import IPython.display
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import tensorflow as tf
+
+mpl.rcParams['figure.figsize'] = (8, 6)
+mpl.rcParams['axes.grid'] = False
+    
+ ```
