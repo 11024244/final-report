@@ -65,4 +65,16 @@ date_time = pd.to_datetime(df.pop('Date Time'), format='%d.%m.%Y %H:%M:%S')
 ```
 df.head()
 ```
+![image](https://github.com/11024244/final-report/blob/main/jpg/1.png)
+以下是一些特徵隨時間的演變：
+```python
+plot_cols = ['T (degC)', 'p (mbar)', 'rho (g/m**3)']
+plot_features = df[plot_cols]
+plot_features.index = date_time
+_ = plot_features.plot(subplots=True)
+
+plot_features = df[plot_cols][:480]
+plot_features.index = date_time[:480]
+_ = plot_features.plot(subplots=True)
+```
 
