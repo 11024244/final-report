@@ -49,3 +49,20 @@ zip_path = tf.keras.utils.get_file(
     extract=True)
 csv_path, _ = os.path.splitext(zip_path)
 ```
+```
+Downloading data from https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip
+13568290/13568290 [==============================] - 0s 0us/step
+```
+本教學僅處理**每小時預測**，因此先從10分鐘間隔到1小時對資料進行下採樣：
+```python
+df = pd.read_csv(csv_path)
+# Slice [start:stop:step], starting from index 5 take every 6th record.
+df = df[5::6]
+
+date_time = pd.to_datetime(df.pop('Date Time'), format='%d.%m.%Y %H:%M:%S')
+```
+讓我們看一下數據。下面是前幾行：
+```
+df.head()
+```
+
