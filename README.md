@@ -1599,6 +1599,7 @@ plt.xticks(ticks=x, labels=multi_performance.keys(),
 plt.ylabel(f'MAE (average over all times and outputs)')
 _ = plt.legend()
 ```
+![image](https://github.com/11024244/final-report/blob/main/jpg/messageImage_1735174116334.jpg)
 ![image](https://github.com/11024244/final-report/blob/main/jpg/messageImage_1735174134511.jpg)
 
 
